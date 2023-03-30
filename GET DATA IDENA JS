@@ -1,0 +1,439 @@
+// config area
+const ssID = "ssID";//ssID SpreadSheet
+const sheetLog = "Log";
+
+const sheetMeas = ["Database"];//nama sheet
+var IDNAaddress = [];
+
+const sleepInterval = 24; //hours
+
+const colRange = "A1:A2"; // kolom
+var state = 3;
+
+var miningFee = 0; //ubah ini nanti
+
+const url = "http://api.idena.io/api/Address/";
+
+const urlEpoch = "http://api.idena.io/api/Epoch/";
+const pathIdentity = "/Identity/";
+const pathValidationSum = "/ValidationSummary";
+const urlIdentity = "http://api.idena.io/api/Identity/";
+
+const age = "/Age";
+const flips = "/CurrentFlipCids";
+const identitys = "/Identity/";
+const av = "/AvailableInvites";
+const pathRew = "/Rewards";
+const urlGetDelegated = "https://api.idena.io/api/onlineidentity/";
+
+const lastepoch = "http://api.idena.io/api/Epochs?limit=1";
+
+function initTriggers() {
+  getAllTriggers();
+  deleteTriggers();
+  getAllTriggers();
+
+  update();
+
+  ScriptApp.newTrigger("update").timeBased().everyHours(sleepInterval).create();
+
+  getAllTriggers();
+}
+
+function getValidationSummary(address, sheet, state, epoch) {
+  var response = UrlFetchApp.fetch(
+    urlEpoch + epoch + pathIdentity + address + pathValidationSum,
+    {
+      muteHttpExceptions: true,
+    }
+  );
+
+  try {
+    var res = JSON.parse(response.getContentText());
+
+    if (res.result != null) {
+      const results = res.result;
+      prefRank = results.prevState;
+      rank = results.state;
+
+      rewards = res.result.rewards;
+      stakingRewards = rewards.staking.earned;
+      flipsRewards = rewards.flips.earned;
+      invRewards = rewards.invitations.earned;
+      repRewards = rewards.reports.earned;
+      canRewards = rewards.candidate.earned;
+      inviterRewards = rewards.invitee.earned;
+      
+      missvalRewards = rewards.staking.missed;
+      missflipsRewards = rewards.flips.missed;
+      missinvRewards = rewards.invitations.missed;
+      missrepRewards = rewards.reports.missed;
+      misscanRewards = rewards.candidate.missed;
+      missinviterRewards = rewards.invitee.missed;
+
+      rank = res.result.state;
+      prefRank = res.result.prevState;
+      penalizeds = res.result.penalized;
+      //totalRewards = res.result.delegateeReward.amount;
+
+      if (rank != "Not Validated" && rank != "Suspended" && rank != "Zombie" && rank != "Candidate" && rank != "Invite"){
+      mathStkReward = (stakingRewards * 100) / 100;
+      mathFlipReward = (flipsRewards * 100) / 100;
+      mathInvReward = (invRewards * 100) / 100;
+      mathRptReward = (repRewards * 100) / 100;
+      mathCanReward = (canRewards * 100) / 100;
+      mathInviterReward = (inviterRewards * 100) / 100;
+      mathmissval = (missvalRewards * 100) / 100;
+      mathmissflip = (missflipsRewards * 100) / 100;
+      mathmissinv = (missinvRewards * 100) / 100;
+      mathmissrep = (missrepRewards * 100) / 100;
+      mathmisscan = (misscanRewards * 100) / 100; 
+      mathmissinviter = (missinviterRewards * 100) / 100;        
+
+     totalRewards = mathStkReward+mathFlipReward+mathInvReward+mathRptReward+mathCanReward+mathInviterReward;
+     missesRewards = mathmissval+mathmissflip+mathmissinv+mathmissrep+mathmisscan+mathmissinviter;
+
+      percentRewards = (totalRewards * 50) / 100;
+      percentProfit = (totalRewards * 50) / 100;
+      }
+      
+    
+      if (prefRank == "Newbie" && rank == "Verified") {
+        mingfees = (miningFee * 25) / 100; // newbie 75% masuk loocked
+        miningRewMitra = (mingfees * 50) / 100;
+        mingProfit = (mingfees * 50) / 100;
+        minghumvernew = mingfees
+      } else if (rank == "Newbie") {
+        mingfees = (miningFee * 25) / 100;
+        miningRewMitra = (mingfees * 50) / 100;
+        mingProfit = mingfees
+        minghumvernew = mingfees
+      } else if (
+        rank == "Zombie" &&
+        rank == "Suspended" &&
+        rank == "Not Validated" ) {
+        miningRewMitra = 0;
+        mingProfit = 0;
+        minghumvernew = 0;
+      } else {
+        miningRewMitra = (miningFee * 50) / 100;
+        mingProfit = (miningFee * 50) / 100;
+        minghumvernew = miningFee
+      }
+
+      if (rank == "Verified" && rank == "Human" && rank == "Newbie" && penalizeds != false) {
+        mingfees = miningFee;
+      }
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 11)
+        .setValue([mathStkReward]);
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 12)
+        .setValue([mathFlipReward]);
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 13)
+        .setValue([mathInvReward]);
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 14)
+        .setValue([mathRptReward]);
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 15)
+        .setValue([mathCanReward]);
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 16)
+        .setValue([mathInviterReward]);
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 17)
+        .setValue([totalRewards]);
+        
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 18)
+        .setValue([missesRewards]);
+    }
+
+    return;
+  } catch (err) {
+    console.error(err.stack, err.message);
+  }
+
+  return;
+}
+
+function getStatus(address, sheet, state) {
+  var response = UrlFetchApp.fetch(urlIdentity + address, {
+    muteHttpExceptions: true,
+  });
+
+  var response2 = UrlFetchApp.fetch(urlIdentity + address + age, {
+    muteHttpExceptions: true,
+  });
+
+  var response3 = UrlFetchApp.fetch(url + address, {
+    muteHttpExceptions: true,
+  });
+
+  try {
+    var res = JSON.parse(response.getContentText());
+    var res2 = JSON.parse(response2.getContentText());
+    var res3 = JSON.parse(response3.getContentText());
+
+    var stake = res3.result.stake;
+    var balance = res3.result.balance;
+
+    var locked;
+    var lokedfix;
+    var profitLocked;
+
+    if (res.result) {
+      const vals = res.result;
+      rank = vals.state;
+      const addressAge = res2.result;
+      poin = vals.totalShortAnswers.point;
+      skorflip = vals.totalShortAnswers.flipsCount;
+      totalscore = poin / skorflip;
+      hasilfix = Math.round((poin / skorflip) * 100, 2);
+
+      let sum = 0 + parseFloat(stake);
+      let balancefix = 0 + parseFloat(balance);
+
+      if (rank == "Verified" && addressAge == 3) {
+        mathlocked = sum * 3;
+        locked = (mathlocked * 75) / 100;
+        lokedfix = (locked * 50) / 100;
+        profitLocked = (locked * 50) / 100;
+      }
+
+      if (rank == "Undefined") {
+        rank = "Not Validated";
+      }
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 5)
+        .setValue([hasilfix]);
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 7)
+        .setValue([balancefix]);
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 4)
+        .setValue([addressAge]);
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 8)
+        .setValue([sum]);
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 3)
+        .setValue([rank]);
+    }
+
+    return;
+  } catch (err) {
+    console.error(err.stack, err.message);
+  }
+  return;
+}
+
+function getFlipStatus(address, sheet, state) {
+  var response = UrlFetchApp.fetch(urlIdentity + address + flips, {
+    muteHttpExceptions: true,
+  });
+
+  try {
+    var res = JSON.parse(response.getContentText());
+    var point = 4;
+    const vals = res.result;
+
+    if (vals != null && rank != "Candidate") {
+      if (vals.length == 0) {
+        flip = "Butuh 3 Flip";
+      } else if (vals.length == 1) {
+        flip = "Butuh 2 Flip";
+      } else if (vals.length == 2) {
+        flip = "Butuh 1 Flip";
+      } else if (vals.length == 3 && rank == "Newbie") {
+        flip = "Done all ";
+      } else if (vals.length == 3 && rank == "Verified") {
+        flip = "Done 3 optional 1";
+      } else if (vals.length == 3 && rank == "Human") {
+        flip = "Done 3 optional 2";
+      } else if (vals.length == 4 && rank == "Verified") {
+        flip = "Done all";
+      } else if (vals.length == 4 && rank == "Human") {
+        flip = "Done 4 optional 1";
+      } else if (vals.length == 5) {
+        flip = "Done all ";
+      } else {
+        flip = "Done";
+      }
+
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 6)
+        .setValue([flip]);
+
+      point++;
+      return;
+    } else if (
+      vals == null &&
+      rank !== "Candidate" &&
+      rank !== "Not Validated" &&
+      rank !== "Suspended" &&
+      rank !== "Zombie" &&
+      rank !== "Killed" &&
+      rank !== "Invite"
+    ) {
+      flip = "Butuh Flip";
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 6)
+        .setValue([flip]);
+
+      point++;
+      return;
+    } else {
+      flip = "Gak Flip";
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 6)
+        .setValue([flip]);
+
+      point++;
+      return;
+    }
+  } catch (err) {
+    console.error(err.stack, err.message);
+  }
+  return;
+}
+
+function getFlipReport(address, sheet, state, epoch) {
+  var response = UrlFetchApp.fetch(
+    urlEpoch + epoch + identitys + address + pathRew,
+    {
+      muteHttpExceptions: true,
+    }
+  );
+
+  try {
+    var res = JSON.parse(response.getContentText());
+    var point = 4;
+    if (
+      res.result == null &&
+      rank != "Candidate" &&
+      rank != "Suspended" &&
+      rank != "Not Validated" &&
+      rank != "Zombie" &&
+      rank != "Killed" &&
+      rank != "Invite"
+    ) {
+      flip = "Ke Report";
+      SpreadsheetApp.openById(ssID)
+        .getSheetByName(sheet)
+        .getRange(state, 10)
+        .setValue([flip]);
+    }
+  } catch (err) {
+    console.error(err.stack, err.message);
+  }
+}
+
+function getDelegatedTo(address, sheet, state) {
+  var response = UrlFetchApp.fetch(urlGetDelegated + address);
+  var json = response.getContentText();
+  var data = JSON.parse(json);
+
+  try {
+    var delegateeAddress = data.result.delegatee.address;
+    SpreadsheetApp.openById(ssID)
+      .getSheetByName(sheet)
+      .getRange(state, 9)
+      .setValue([delegateeAddress]);
+    point++;
+    return;
+  } catch (err) {
+    console.error(err.stack, err.message);
+  }
+
+  return;
+}
+
+function getLastEpoch() {
+  var response = UrlFetchApp.fetch(lastepoch, {
+    muteHttpExceptions: true,
+  });
+  try {
+    var res = JSON.parse(response.getContentText());
+    if (res.result) {
+      const vals = res.result[0],
+        epoch = vals.epoch;
+      return epoch;
+    }
+    return;
+  } catch (err) {
+    console.error(err.stack, err.message);
+  }
+  return;
+}
+
+function percentageProgress(partialValue, totalValue) {
+  var percentValue = ((100 * partialValue) / totalValue).toFixed(2);
+  return percentValue + " %";
+}
+
+function update() {
+  var idexceltarget = ssID;
+
+  var a = SpreadsheetApp.openById(idexceltarget);
+  var cell = a.getActiveSheet().getRange(colRange).getValues();
+  IDNAaddress = cell;
+
+  var epochValue = getLastEpoch();
+  var epochPref = epochValue - 1;
+
+  for (var i = 0, max = IDNAaddress.length; i < max; i++) {
+    getValidationSummary(IDNAaddress[i], sheetMeas, state, epochPref);
+    getStatus(IDNAaddress[i], sheetMeas, state);
+    getFlipStatus(IDNAaddress[i], sheetMeas, state);
+    getFlipReport(IDNAaddress[i], sheetMeas, state, epochPref);
+    getDelegatedTo(IDNAaddress[i], sheetMeas, state)
+
+    console.log(percentageProgress(state - 3, max));
+    console.log(state - 3 + " / " + max);
+    state += 1;
+  }
+}
+
+function deleteTriggers() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    ScriptApp.deleteTrigger(triggers[i]);
+  }
+}
+
+function getAllTriggers() {
+  Logger.log(
+    "Current script has " + ScriptApp.getScriptTriggers().length + " triggers."
+  );
+}
